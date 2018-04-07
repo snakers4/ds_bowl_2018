@@ -354,7 +354,7 @@ def main():
         #                                          min_lr = 1e-6
         #                                          )
 
-        scheduler = MultiStepLR(optimizer, milestones=[25,100,150], gamma=0.1)    
+        scheduler = MultiStepLR(optimizer, milestones=[10,100,150], gamma=0.1)    
 
         # resolution is embedded into the augment call itself
         train_augs = BAugsNoResizeCrop(prob=0.5,
@@ -378,7 +378,7 @@ def main():
         for epoch in range(args.start_epoch, args.epochs):
             
             # unfreeze the encoder
-            if epoch==5:
+            if epoch==10:
                 print('Encoder unfrozen')
                 model.module.require_encoder_grad(True)
                 

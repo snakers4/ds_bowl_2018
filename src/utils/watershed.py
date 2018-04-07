@@ -20,6 +20,7 @@ from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation
 from skimage.morphology import disk
 from skimage.feature import peak_local_max
+from skimage.feature import blob_log
 
 from scipy import ndimage as ndi
 
@@ -284,4 +285,49 @@ def energy_baseline_markers(msk = None,
     labels = watershed(-distance,
                        markers,
                        mask=msk_ths)
+    return labels
+
+def energy_baseline_blob(msk = None,
+                    energy = None,
+                    threshold = 0.5,
+                    energy_ths = 0.2):
+    
+    msk_ths = (np.copy(msk)>255*threshold)*1
+    energy[energy < 255 * energy_ths] = 0
+    energy = energy.astype('uint8')
+    
+    regions = regionprops(label(msk_ths))
+    
+    max_radius = 0
+    min_radius = 100
+    
+    for props in regions:
+        if props.equivalent_diameter/2 > max_radius:
+            max_radius = props.equivalent_diameter/2
+        if props.equivalent_diameter/2 < min_radius:
+            min_radius = props.equivalent_diameter/2                
+                        
+    min_radius = max(min_radius,2)
+        
+    blobs_log = blob_log(energy,
+                         min_sigma=min_radius,
+                         max_sigma=max_radius/1.5,
+                         num_sigma=10,
+                         threshold=.1)
+    
+    markers = np.zeros_like(energy)
+
+    for blob in blobs_log:
+        markers[int(blob[0]),int(blob[1])] = 1
+
+    # markers = binary_dilation(markers, selem=disk(1)) 
+    markers = label(markers)  
+    
+    distance = ndi.distance_transform_edt(msk_ths)
+    
+    # Marker labelling 
+    labels = watershed(-distance,
+                       markers,
+                       mask=msk_ths)
+    
     return labels

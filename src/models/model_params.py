@@ -28,8 +28,10 @@ model_presets = {
     'unet16_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':32}],
     
     'unet16_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':32}],
-    'unet16_64_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':64}],   
-    'unet16_128_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':128}],    
+    'unet16_64_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':64}],
+    
+    'unet16_128_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':128}],
+    'unet16_160_6_dc' : [UNet16,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':160}],      
     
     'albunet32_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':32}],
     'albunet64_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':64}],       
