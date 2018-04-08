@@ -850,7 +850,7 @@ class BDatasetResizeSeedErode(data.Dataset):
                 target_h = (h//self.factor + 1) * self.factor
             else:
                 target_h = h
-
+           
             if w != target_w or h != target_h:
                 img = cv2.resize(img, (target_h,target_w), interpolation=cv2.INTER_LINEAR)
 

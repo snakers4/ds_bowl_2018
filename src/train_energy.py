@@ -357,7 +357,7 @@ def main():
         #                                          min_lr = 1e-6
         #                                          )
 
-        scheduler = MultiStepLR(optimizer, milestones=[10,100,150], gamma=0.1)    
+        scheduler = MultiStepLR(optimizer, milestones=[20,100,150], gamma=0.1)    
 
         # resolution is embedded into the augment call itself
         train_augs = BAugsNoResizeCrop(prob=0.5,
@@ -715,6 +715,7 @@ def validate(val_loader,
             pred_mask3 = m(pred_output[3,:,:]).data.cpu().numpy()
             pred_mask0 = m(pred_output[4,:,:]).data.cpu().numpy()
             pred_distance = m(pred_output[5,:,:]).data.cpu().numpy()
+            pred_border = m(pred_output[6,:,:]).data.cpu().numpy()            
 
             pred_mask = cv2.resize(pred_mask, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask1 = cv2.resize(pred_mask1, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
@@ -722,11 +723,17 @@ def validate(val_loader,
             pred_mask3 = cv2.resize(pred_mask3, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask0 = cv2.resize(pred_mask0, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_distance = cv2.resize(pred_distance, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
+            pred_border = cv2.resize(pred_border, (or_h,or_w), interpolation=cv2.INTER_LINEAR)            
+            
+            pred_border = pred_border > 0.1
+            from skimage.morphology import disk
+            from skimage.morphology import dilation            
+            selem = disk(1)
+            pred_border = dilation(pred_border, selem)            
             
             # predict average energy by summing all the masks up 
             pred_energy = (pred_mask+pred_mask1+pred_mask2+pred_mask3+pred_mask0+pred_distance)/6*255
-            pred_mask_255 = np.copy(pred_mask) * 255
-            
+
             # read the original masks for metric evaluation
             mask_glob = glob.glob('../data/stage1_train/{}/masks/*.png'.format(img_sample[j]))
             gt_masks = imread_collection(mask_glob).concatenate()
