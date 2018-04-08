@@ -311,7 +311,7 @@ def energy_baseline_blob(msk = None,
         
     blobs_log = blob_log(energy,
                          min_sigma=min_radius,
-                         max_sigma=max_radius/1.5,
+                         max_sigma=max_radius,
                          num_sigma=10,
                          threshold=.1)
     
@@ -326,6 +326,79 @@ def energy_baseline_blob(msk = None,
     distance = ndi.distance_transform_edt(msk_ths)
     
     # Marker labelling 
+    labels = watershed(-distance,
+                       markers,
+                       mask=msk_ths)
+    
+    return labels
+
+def mixed_wt(msk = None,
+            energy = None,
+            threshold = 0.5,
+            energy_ths = 0.2):
+    
+    msk_ths = (np.copy(msk)>255*threshold)*1
+    regions = regionprops(label(msk_ths))
+    
+    max_radius = 0
+    min_radius = 100
+    
+    for props in regions:
+        if props.equivalent_diameter/2 > max_radius:
+            max_radius = props.equivalent_diameter/2
+    
+    if max_radius > 20:
+        return energy_baseline(msk = msk,energy = energy,threshold = threshold)
+    else:
+        return energy_baseline_blob(msk = msk,energy = energy,threshold = threshold)
+    
+def mixed_wt2(msk = None,
+            energy = None,
+            threshold = 0.5,
+            energy_ths = 0.4):
+    
+    msk_ths = (np.copy(msk)>255*threshold)*1
+    energy_threshold = np.copy(energy)
+
+    distance = ndi.distance_transform_edt(msk_ths)
+
+    # add local maxima to markers as nuclei "centers"
+
+    energy[energy < 255 * energy_ths] = 0
+    energy = energy.astype('uint8')
+
+    regions = regionprops(label(msk_ths))
+
+    max_radius = 0
+    min_radius = 100
+
+    for props in regions:
+        if props.equivalent_diameter/2 > max_radius:
+            max_radius = props.equivalent_diameter/2
+        if props.equivalent_diameter/2 < min_radius:
+            min_radius = props.equivalent_diameter/2                
+
+    min_radius = max(min_radius,2)
+
+    blobs_log = blob_log(energy,
+                         min_sigma=min_radius,
+                         max_sigma=max_radius,
+                         num_sigma=10,
+                         threshold=.1)
+
+    markers = np.zeros_like(energy)
+
+    for blob in blobs_log:
+        markers[int(blob[0]),int(blob[1])] = 1
+
+    markers = binary_dilation(markers, selem=disk(2))
+
+    energy_threshold = markers*255/4 + energy_threshold*(3/4)
+    energy_threshold = (energy_threshold>255*energy_ths)*1  
+
+    # Marker labelling
+    markers = label(energy_threshold)    
+
     labels = watershed(-distance,
                        markers,
                        mask=msk_ths)

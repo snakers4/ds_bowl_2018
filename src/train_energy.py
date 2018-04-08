@@ -99,6 +99,8 @@ parser.add_argument('--is_img_augs', default=False, type=str2bool,
                     help='Use heavier imgaugs augs')
 parser.add_argument('--is_distance_transform', default=False, type=str2bool,
                     help='Predict distance to the boundary')
+parser.add_argument('--is_boundaries', default=False, type=str2bool,
+                    help='Also predict cell boundaries')
 
 #============ other params ============#
 parser.add_argument('-pr', '--predict', dest='predict', action='store_true',
@@ -280,7 +282,8 @@ def main():
                              dset_resl = resl_key,
                              is_crop = False,
                              is_img_augs = args.is_img_augs,
-                             is_distance_transform = args.is_distance_transform                                                  
+                             is_distance_transform = args.is_distance_transform,
+                             is_boundaries = args.is_boundaries
                              )
 
             print('Validating on {} resl\tVal dataset length {}'.format(resl_key,len(val_dataset)))
@@ -414,7 +417,8 @@ def main():
                                  dset_resl = resl_key,
                                  is_crop = True,
                                  is_img_augs = args.is_img_augs,
-                                 is_distance_transform = args.is_distance_transform
+                                 is_distance_transform = args.is_distance_transform,
+                                 is_boundaries = args.is_boundaries                                                        
                                  )
 
                 print('Training on {} resl\tTrain dataset length {}'.format(resl_key,len(train_dataset)))       
@@ -465,7 +469,8 @@ def main():
                                  mode = 'val',
                                  dset_resl = resl_key,
                                  is_crop = False,
-                                 is_distance_transform = args.is_distance_transform
+                                 is_distance_transform = args.is_distance_transform,
+                                 is_boundaries = args.is_boundaries                                                      
                                  )
 
                 print('Training on {} resl\tVal dataset length {}'.format(resl_key,len(val_dataset)))
@@ -797,7 +802,31 @@ def validate(val_loader,
                         'pred_wt_seed': y_preds_wt_seed[:2,:,:,:],
                     }
                     for tag, images in info.items():
-                        logger.image_summary(tag, images, valid_minib_counter)                        
+                        logger.image_summary(tag, images, valid_minib_counter)
+                elif args.channels == 7:
+                    info = {
+                        'images': to_np(input[:2,:,:,:]),
+                        'gt_mask': to_np(target[:2,0,:,:]),
+                        'gt_mask1': to_np(target[:2,1,:,:]),
+                        'gt_mask2': to_np(target[:2,2,:,:]),
+                        'gt_mask3': to_np(target[:2,3,:,:]), 
+                        'gt_mask0': to_np(target[:2,4,:,:]),
+                        'gt_mask_distance': to_np(target[:2,5,:,:]),
+                        'gt_border': to_np(target[:2,6,:,:]),                        
+                        'pred_mask': to_np(m(output.data[:2,0,:,:])),
+                        'pred_mask1': to_np(m(output.data[:2,1,:,:])),
+                        'pred_mask2': to_np(m(output.data[:2,2,:,:])),
+                        'pred_mask3': to_np(m(output.data[:2,3,:,:])),
+                        'pred_mask0': to_np(m(output.data[:2,4,:,:])),
+                        'pred_distance': to_np(m(output.data[:2,5,:,:])),
+                        'pred_border': to_np(m(output.data[:2,6,:,:])),                        
+                        'pred_energy': energy_levels[:2,:,:], 
+                        'pred_wt': y_preds_wt[:2,:,:],
+                        'pred_wt_seed': y_preds_wt_seed[:2,:,:,:],
+                    }
+                    for tag, images in info.items():
+                        logger.image_summary(tag, images, valid_minib_counter)                              
+                        
 
         # calcuale f1 scores only on inner cell masks
         # weird pytorch numerical issue when converting to float

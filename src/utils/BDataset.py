@@ -680,14 +680,15 @@ class BDatasetResizeSeedErode(data.Dataset):
                  is_crop = False,
                  is_img_augs = False,
                  is_distance_transform = False,
-                 is_center = False):
+                 is_center = False,
+                 is_boundaries = False,
+                 boundary_mode = 'thick'):
         
         self.is_crop = is_crop
+        self.is_boundaries = is_boundaries
         self.is_img_augs = is_img_augs
+        self.boundary_mode = boundary_mode
         self.is_distance_transform = is_distance_transform
-        
-        print('Using imgaugs is {}'.format(self.is_img_augs))
-        
         bad_idx = [53]
         self.df = df
         self.factor = 64
@@ -756,6 +757,13 @@ class BDatasetResizeSeedErode(data.Dataset):
                 masks_thin0 = np.asarray([(thin_region_fast(_,7)) for _ in masks])
                 mask0 = np.sum(np.stack(masks_thin0, 0), 0).astype('uint8')
             
+            if self.is_boundaries == True:
+                gt_labels = np.zeros((mask.shape[0], mask.shape[1]), np.uint16)
+                for index in range(0, len(masks)):
+                    gt_labels[masks[index] > 0] = index + 1
+                boundaries = find_boundaries(gt_labels, connectivity=1, mode=self.boundary_mode, background=0)
+                boundaries = (boundaries * 1).astype('uint8')
+            
             # normalize distances by image size
             # this seems to be a natural way
             if self.is_distance_transform == True:
@@ -797,6 +805,13 @@ class BDatasetResizeSeedErode(data.Dataset):
             else:
                 masks_thin0 = np.asarray([(thin_region_fast(_,7)) for _ in masks])
                 mask0 = np.sum(np.stack(masks_thin0, 0), 0).astype('uint8')
+            
+            if self.is_boundaries == True:
+                gt_labels = np.zeros((mask.shape[0], mask.shape[1]), np.uint16)
+                for index in range(0, len(masks)):
+                    gt_labels[masks[index] > 0] = index + 1
+                boundaries = find_boundaries(gt_labels, connectivity=1, mode=self.boundary_mode, background=0)
+                boundaries = (boundaries * 1).astype('uint8')             
             
             # normalize distances by image size
             # this seems to be a natural way
@@ -842,7 +857,10 @@ class BDatasetResizeSeedErode(data.Dataset):
                 if mask is not None:
                     
                     if self.is_distance_transform == True:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                        if self.is_boundaries == True:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
+                        else:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
                     else:
                         msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
                         
@@ -850,13 +868,19 @@ class BDatasetResizeSeedErode(data.Dataset):
             else:
                 if mask is not None: 
                     if self.is_distance_transform == True:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                        if self.is_boundaries == True:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
+                        else:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
                     else:
                         msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
         else:
             if mask is not None: 
                 if self.is_distance_transform == True:
-                    msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                    if self.is_boundaries == True:
+                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
+                    else:
+                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
                 else:
                     msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)       
 
