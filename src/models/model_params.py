@@ -34,7 +34,10 @@ model_presets = {
     
     'unet16_16_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':16}], 
     'unet16_32_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':32}],      
-    'unet16_160_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':160}],      
+    'unet16_160_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':160}],
+    'unet16_128_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':128}],
+    
+    'unet16_64_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':64}],     
     
     'albunet32_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':32}],
     'albunet64_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':64}],       

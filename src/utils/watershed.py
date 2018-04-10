@@ -404,3 +404,71 @@ def mixed_wt2(msk = None,
                        mask=msk_ths)
     
     return labels
+
+def energy_baseline_blob2(msk = None,
+                    energy = None,
+                    threshold = 0.5,
+                    energy_ths = 0.4):
+
+    msk_ths = (np.copy(msk)>255*threshold)*1
+    energy[energy < 255 * energy_ths] = 0
+    energy = energy.astype('uint8')
+
+    regions = regionprops(label(msk_ths))
+
+    max_radius = 0
+    min_radius = 100
+
+    for props in regions:
+        if props.equivalent_diameter/2 > max_radius:
+            max_radius = props.equivalent_diameter/2
+        if props.equivalent_diameter/2 < min_radius:
+            min_radius = props.equivalent_diameter/2                
+
+    min_radius = max(min_radius,2)
+
+    # estimate kernel nuclei centers
+    blobs_log = blob_log(energy,
+                         min_sigma=min_radius,
+                         max_sigma=max_radius,
+                         num_sigma=10,
+                         threshold=.1)
+
+    markers = []
+
+    # draw nuclei centers with decay
+    for blob in blobs_log:
+        marker = np.zeros_like(energy).astype('float')
+        marker[int(blob[0]),int(blob[1])] = 1
+
+        dsk = disk(int(blob[2])).astype('float')
+        for i in range(1,dsk.shape[0]//2+1):
+            dsk[i:-i,i:-i] = dsk[i:-i,i:-i] * 1.4
+        dsk = dsk/dsk.max()    
+
+        # find a fix for a case then the center is touching the frame
+        try:
+            marker[int(blob[0])-dsk.shape[0]//2:int(blob[0])+dsk.shape[0]//2+1,int(blob[1])-dsk.shape[0]//2:int(blob[1])+dsk.shape[0]//2+1] = dsk
+        except:
+            pass
+        # marker = dilation(marker, selem=disk(round(blob[2],0))) 
+        markers.append(marker)
+
+    try:
+        markers = np.sum(np.stack(markers, 0), 0)
+        a = 0.25
+        b = 0.75
+        markers = (a*markers*255+b*energy)>255*energy_ths        
+    except:
+        markers = energy>255*energy_ths
+
+
+    markers = label(markers)  
+    distance = ndi.distance_transform_edt(msk_ths)
+
+    # Marker labelling 
+    labels = watershed(-distance,
+                       markers,
+                       mask=msk_ths)
+    
+    return labels

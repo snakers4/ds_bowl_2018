@@ -189,11 +189,11 @@ def main():
         
         # only one fold
         # for mdl,fold in zip([model,model1,model2,model3],range(0,4)):
-        for mdl,fold in zip([model],[0]):
-            print('weights/' + args.lognumber + '_fold' + str(args.fold_num) + '_checkpoint.pth.tar')
-            checkpoint = torch.load('weights/' + args.lognumber + '_fold' + str(args.fold_num) + '_checkpoint.pth.tar')
+        for mdl,fold in zip([model],[1]):
+            print('weights/' + args.lognumber + '_fold' + str(fold) + '_best.pth.tar')
+            checkpoint = torch.load('weights/' + args.lognumber + '_fold' + str(args.fold_num) + '_best.pth.tar')
             mdl.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}' (epoch {}) for fold"
+            print("=> loaded checkpoint '{}' for fold {}"
                   .format(checkpoint['epoch'], fold))
 
         for test_resl in test_resl_list:
@@ -257,7 +257,7 @@ def main():
         else:
             raise ValueError('Optimizer not supported')           
 
-        scheduler = MultiStepLR(optimizer, milestones=[25,100,150], gamma=0.1)            
+        scheduler = MultiStepLR(optimizer, milestones=[100,250], gamma=0.1)            
             
         val_dset_lengths = []
         val_losses = []
@@ -357,7 +357,7 @@ def main():
         #                                          min_lr = 1e-6
         #                                          )
 
-        scheduler = MultiStepLR(optimizer, milestones=[20,100,150], gamma=0.1)    
+        scheduler = MultiStepLR(optimizer, milestones=[100,250], gamma=0.1)  
 
         # resolution is embedded into the augment call itself
         train_augs = BAugsNoResizeCrop(prob=0.5,
@@ -381,7 +381,7 @@ def main():
         for epoch in range(args.start_epoch, args.epochs):
             
             # unfreeze the encoder
-            if epoch==10:
+            if epoch==50:
                 print('Encoder unfrozen')
                 model.module.require_encoder_grad(True)
                 
@@ -733,6 +733,7 @@ def validate(val_loader,
             
             # predict average energy by summing all the masks up 
             pred_energy = (pred_mask+pred_mask1+pred_mask2+pred_mask3+pred_mask0+pred_distance)/6*255
+            pred_mask_255 = np.copy(pred_mask) * 255            
 
             # read the original masks for metric evaluation
             mask_glob = glob.glob('../data/stage1_train/{}/masks/*.png'.format(img_sample[j]))
