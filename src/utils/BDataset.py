@@ -1208,9 +1208,9 @@ class BDatasetPad(data.Dataset):
                         else:
                             msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
                         
-                    msk = pad(array=msk,
-                              pad_width=[(target_w-w)//2,(target_h-h)//2],
-                              mode='constant')                    
+                    msk = np.pad(array=msk,
+                              pad_width=((add_x,add_x+add_x_1),(add_y,add_y_1+add_y),(0,0)),
+                              mode='constant')                  
             else:
                 if mask is not None: 
                     
