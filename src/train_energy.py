@@ -723,8 +723,8 @@ def validate(val_loader,
             pred_mask0 = m(pred_output[4,:,:]).data.cpu().numpy()
             pred_border = m(pred_output[5,:,:]).data.cpu().numpy()
             # pred_distance = m(pred_output[5,:,:]).data.cpu().numpy()            
-            pred_vector0 = m(pred_output[6,:,:]).data.cpu().numpy()
-            pred_vector1 = m(pred_output[7,:,:]).data.cpu().numpy()             
+            pred_vector0 = pred_output[6,:,:].data.cpu().numpy()
+            pred_vector1 = pred_output[7,:,:].data.cpu().numpy()             
 
             pred_mask = cv2.resize(pred_mask, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask1 = cv2.resize(pred_mask1, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
