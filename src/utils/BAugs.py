@@ -69,6 +69,19 @@ class BAugsValNoResize(object):
             # ImageOnly(CLAHE()),
             ImageOnly(AlwaysGray()),            
             ImageOnly(Normalize(mean=self.mean, std=self.std)),
+        ])(img, mask)
+    
+class BAugsValPad(object):
+    def __init__(self,
+                 mean=(0.485, 0.456, 0.406),
+                 std=(0.229, 0.224, 0.225)):
+        self.mean = mean
+        self.std = std
+    def __call__(self, img, mask):
+        return DualCompose([
+            # ImageOnly(CLAHE()),
+            ImageOnly(AlwaysGray()),            
+            # ImageOnly(Normalize(mean=self.mean, std=self.std)),
         ])(img, mask)      
     
 class BAugsNoResizeCrop(object):
