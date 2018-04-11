@@ -174,17 +174,42 @@ def thin_region_fast(mask,
     except:
         return empty
     
-def distance_transform_fast(mask):
+def distance_transform_fast(mask,
+                           return_indices=False):
     
     min_x, max_x = np.argwhere(mask > 0)[:,0].min(),np.argwhere(mask > 0)[:,0].max()
     min_y, max_y = np.argwhere(mask > 0)[:,1].min(),np.argwhere(mask > 0)[:,1].max()
-   
-    empty = np.zeros_like(mask)
-    try:
-        empty[min_x:max_x,min_y:max_y] = ndimage.distance_transform_edt(mask[min_x:max_x,min_y:max_y])
-        return empty
-    except:
-        return empty    
+    
+    if return_indices == False:
+        empty = np.zeros_like(mask)
+        try:
+            empty[min_x:max_x,min_y:max_y] = ndimage.distance_transform_edt(mask[min_x:max_x,min_y:max_y])
+            return empty
+        except:
+            return empty
+    else:
+        min_x = max(min_x-5,0)
+        min_y = max(min_y-5,0)
+        max_x = max_x+5
+        max_y = max_y+5
+        
+        empty = np.zeros_like(mask)
+        indices = np.zeros_like(np.vstack([[mask]*2])) 
+        
+        try:
+            empty[min_x:max_x,min_y:max_y],indices[:,min_x:max_x,min_y:max_y] = ndimage.distance_transform_edt(mask[min_x:max_x,min_y:max_y],return_indices=True)
+            indices[0] = indices[0] + min_x
+            indices[1] = indices[1] + min_y
+            return empty,indices
+        except:
+            return empty,indices        
+    
+def mask2vectors(mask):
+    distances, indices = distance_transform_fast(mask,return_indices=True)
+    # avoid division by zero for blank areas  when normalizing
+    grid_indices = np.indices((mask.shape[0],mask.shape[1]))
+    distances[distances==0]=1
+    return (indices*(mask>255//2) - grid_indices*(mask>255//2)) / np.asarray([distances,distances])
 
 class BDataset(data.Dataset):
     def __init__(self,
@@ -682,12 +707,14 @@ class BDatasetResizeSeedErode(data.Dataset):
                  is_distance_transform = False,
                  is_center = False,
                  is_boundaries = False,
+                 is_vectors = False,
                  boundary_mode = 'thick'):
         
         self.is_crop = is_crop
         self.is_boundaries = is_boundaries
         self.is_img_augs = is_img_augs
         self.boundary_mode = boundary_mode
+        self.is_vectors = is_vectors
         self.is_distance_transform = is_distance_transform
         bad_idx = [53]
         self.df = df
@@ -770,6 +797,12 @@ class BDatasetResizeSeedErode(data.Dataset):
                 masks_distance = np.asarray([(distance_transform_fast(_)) for _ in masks])
                 # we lose some accuracy here
                 mask_distance = np.sum(np.stack(masks_distance, 0), 0).astype('uint8')
+                
+            if self.is_vectors == True:
+                vectors = np.asarray([(mask2vectors(_)) for _ in masks])
+                vectors = (np.sum(np.stack(vectors, 0), 0))
+                # encode as int for augmentations
+                vectors = ((vectors+1)*125).astype('uint8')
             
             mask1 = np.sum(np.stack(masks_thin1, 0), 0).astype('uint8')
             mask2 = np.sum(np.stack(masks_thin2, 0), 0).astype('uint8')   
@@ -818,7 +851,13 @@ class BDatasetResizeSeedErode(data.Dataset):
             if self.is_distance_transform == True:
                 masks_distance = np.asarray([(distance_transform_fast(_)) for _ in masks])
                 # we lose some accuracy here
-                mask_distance = np.sum(np.stack(masks_distance, 0), 0).astype('uint8')            
+                mask_distance = np.sum(np.stack(masks_distance, 0), 0).astype('uint8')
+                
+            if self.is_vectors == True:
+                vectors = np.asarray([(mask2vectors(_)) for _ in masks])
+                vectors = (np.sum(np.stack(vectors, 0), 0))
+                # encode as int for augmentations
+                vectors = ((vectors+1)*125).astype('uint8')                
             
             mask1 = np.sum(np.stack(masks_thin1, 0), 0).astype('uint8')
             mask2 = np.sum(np.stack(masks_thin2, 0), 0).astype('uint8')   
@@ -856,33 +895,44 @@ class BDatasetResizeSeedErode(data.Dataset):
 
                 if mask is not None:
                     
-                    if self.is_distance_transform == True:
-                        if self.is_boundaries == True:
-                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
-                        else:
-                            msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                    if self.is_vectors == True and self.is_boundaries == True:
+                        msk = np.stack((mask,mask1,mask2,mask3,mask0,boundaries,vectors[0],vectors[1]),axis=2)
                     else:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
+                        if self.is_distance_transform == True:
+                            if self.is_boundaries == True:
+                                msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
+                            else:
+                                msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                        else:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
                         
                     msk = cv2.resize(msk, (target_h,target_w), interpolation=cv2.INTER_LINEAR)
             else:
                 if mask is not None: 
+                    
+                    if self.is_vectors == True and self.is_boundaries == True:
+                        msk = np.stack((mask,mask1,mask2,mask3,mask0,boundaries,vectors[0],vectors[1]),axis=2)
+                    else:
+                        if self.is_distance_transform == True:
+                            if self.is_boundaries == True:
+                                msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
+                            else:
+                                msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
+                        else:
+                            msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
+        else:
+            if mask is not None: 
+                
+                if self.is_vectors == True and self.is_boundaries == True:
+                    msk = np.stack((mask,mask1,mask2,mask3,mask0,boundaries,vectors[0],vectors[1]),axis=2)
+                else:
                     if self.is_distance_transform == True:
                         if self.is_boundaries == True:
                             msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
                         else:
                             msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
                     else:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)
-        else:
-            if mask is not None: 
-                if self.is_distance_transform == True:
-                    if self.is_boundaries == True:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance,boundaries),axis=2)
-                    else:
-                        msk = np.stack((mask,mask1,mask2,mask3,mask0,mask_distance),axis=2)
-                else:
-                    msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)       
+                        msk = np.stack((mask,mask1,mask2,mask3,mask0),axis=2)       
 
         if self.transforms is not None:
             if mask is not None:    
@@ -903,6 +953,12 @@ class BDatasetResizeSeedErode(data.Dataset):
             if max_dist == 0:
                 max_dist = 1
             msk[:,:,5] = msk[:,:,5] / max_dist
+            
+        # do not forget to convert vectors back to float  
+        if self.is_vectors == True and self.is_boundaries == True:
+            msk = msk.astype(float)
+            msk[:,:,6] = msk[:,:,6]/125-1
+            msk[:,:,7] = msk[:,:,7]/125-1
                 
         if self.is_crop == False:
             # if the image gets flipped, flip it back

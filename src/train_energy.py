@@ -101,6 +101,8 @@ parser.add_argument('--is_distance_transform', default=False, type=str2bool,
                     help='Predict distance to the boundary')
 parser.add_argument('--is_boundaries', default=False, type=str2bool,
                     help='Also predict cell boundaries')
+parser.add_argument('--is_vectors', default=False, type=str2bool,
+                    help='Also predict unit vector coordinates coorresponding to distance to boundary')
 
 #============ other params ============#
 parser.add_argument('-pr', '--predict', dest='predict', action='store_true',
@@ -189,7 +191,7 @@ def main():
         
         # only one fold
         # for mdl,fold in zip([model,model1,model2,model3],range(0,4)):
-        for mdl,fold in zip([model],[1]):
+        for mdl,fold in zip([model],[0]):
             print('weights/' + args.lognumber + '_fold' + str(fold) + '_best.pth.tar')
             checkpoint = torch.load('weights/' + args.lognumber + '_fold' + str(args.fold_num) + '_best.pth.tar')
             mdl.load_state_dict(checkpoint['state_dict'])
@@ -243,7 +245,8 @@ def main():
                             std=model.module.std)    
     
         criterion = AVDiceLoss(bce_weight=float(args.bce_weight),
-                               dice_weight=float(args.dice_weight)).cuda()
+                               dice_weight=float(args.dice_weight),
+                               is_vectors=args.is_vectors).cuda()
         
         if args.optimizer.startswith('adam'):           
             optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), # Only finetunable params
@@ -283,7 +286,8 @@ def main():
                              is_crop = False,
                              is_img_augs = args.is_img_augs,
                              is_distance_transform = args.is_distance_transform,
-                             is_boundaries = args.is_boundaries
+                             is_boundaries = args.is_boundaries,
+                             is_vectors = args.is_vectors
                              )
 
             print('Validating on {} resl\tVal dataset length {}'.format(resl_key,len(val_dataset)))
@@ -333,7 +337,8 @@ def main():
         train_df = train_df.reset_index()
         
         criterion = AVDiceLoss(bce_weight=float(args.bce_weight),
-                               dice_weight=float(args.dice_weight)).cuda()
+                               dice_weight=float(args.dice_weight),
+                               is_vectors=args.is_vectors).cuda()
 
         if args.optimizer.startswith('adam'):           
             optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), # Only finetunable params
@@ -357,7 +362,7 @@ def main():
         #                                          min_lr = 1e-6
         #                                          )
 
-        scheduler = MultiStepLR(optimizer, milestones=[100,250], gamma=0.1)  
+        scheduler = MultiStepLR(optimizer, milestones=[20,150], gamma=0.1)  
 
         # resolution is embedded into the augment call itself
         train_augs = BAugsNoResizeCrop(prob=0.5,
@@ -381,7 +386,7 @@ def main():
         for epoch in range(args.start_epoch, args.epochs):
             
             # unfreeze the encoder
-            if epoch==50:
+            if epoch==20:
                 print('Encoder unfrozen')
                 model.module.require_encoder_grad(True)
                 
@@ -418,7 +423,8 @@ def main():
                                  is_crop = True,
                                  is_img_augs = args.is_img_augs,
                                  is_distance_transform = args.is_distance_transform,
-                                 is_boundaries = args.is_boundaries                                                        
+                                 is_boundaries = args.is_boundaries,
+                                 is_vectors = args.is_vectors
                                  )
 
                 print('Training on {} resl\tTrain dataset length {}'.format(resl_key,len(train_dataset)))       
@@ -470,7 +476,8 @@ def main():
                                  dset_resl = resl_key,
                                  is_crop = False,
                                  is_distance_transform = args.is_distance_transform,
-                                 is_boundaries = args.is_boundaries                                                      
+                                 is_boundaries = args.is_boundaries,
+                                 is_vectors = args.is_vectors
                                  )
 
                 print('Training on {} resl\tVal dataset length {}'.format(resl_key,len(val_dataset)))
@@ -707,32 +714,30 @@ def validate(val_loader,
             or_w = or_resl[0][j]
             or_h = or_resl[1][j]
             
-            # predicted mask, various levels of mask erosion and mask center
+            # I keep only the latest preset
             
             pred_mask = m(pred_output[0,:,:]).data.cpu().numpy()
             pred_mask1 = m(pred_output[1,:,:]).data.cpu().numpy()
             pred_mask2 = m(pred_output[2,:,:]).data.cpu().numpy()
             pred_mask3 = m(pred_output[3,:,:]).data.cpu().numpy()
             pred_mask0 = m(pred_output[4,:,:]).data.cpu().numpy()
-            pred_distance = m(pred_output[5,:,:]).data.cpu().numpy()
-            pred_border = m(pred_output[6,:,:]).data.cpu().numpy()            
+            pred_border = m(pred_output[5,:,:]).data.cpu().numpy()
+            # pred_distance = m(pred_output[5,:,:]).data.cpu().numpy()            
+            pred_vector0 = m(pred_output[6,:,:]).data.cpu().numpy()
+            pred_vector1 = m(pred_output[7,:,:]).data.cpu().numpy()             
 
             pred_mask = cv2.resize(pred_mask, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask1 = cv2.resize(pred_mask1, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask2 = cv2.resize(pred_mask2, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask3 = cv2.resize(pred_mask3, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
             pred_mask0 = cv2.resize(pred_mask0, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
-            pred_distance = cv2.resize(pred_distance, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
-            pred_border = cv2.resize(pred_border, (or_h,or_w), interpolation=cv2.INTER_LINEAR)            
-            
-            pred_border = pred_border > 0.1
-            from skimage.morphology import disk
-            from skimage.morphology import dilation            
-            selem = disk(1)
-            pred_border = dilation(pred_border, selem)            
+            # pred_distance = cv2.resize(pred_distance, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
+            pred_border = cv2.resize(pred_border, (or_h,or_w), interpolation=cv2.INTER_LINEAR)
+            pred_vector0 = cv2.resize(pred_vector0, (or_h,or_w), interpolation=cv2.INTER_LINEAR) 
+            pred_vector1 = cv2.resize(pred_vector1, (or_h,or_w), interpolation=cv2.INTER_LINEAR)             
             
             # predict average energy by summing all the masks up 
-            pred_energy = (pred_mask+pred_mask1+pred_mask2+pred_mask3+pred_mask0+pred_distance)/6*255
+            pred_energy = (pred_mask+pred_mask1+pred_mask2+pred_mask3+pred_mask0)/5*255
             pred_mask_255 = np.copy(pred_mask) * 255            
 
             # read the original masks for metric evaluation
@@ -833,9 +838,33 @@ def validate(val_loader,
                         'pred_wt_seed': y_preds_wt_seed[:2,:,:,:],
                     }
                     for tag, images in info.items():
-                        logger.image_summary(tag, images, valid_minib_counter)                              
+                        logger.image_summary(tag, images, valid_minib_counter)
+                elif args.channels == 8:
+                    info = {
+                        'images': to_np(input[:2,:,:,:]),
+                        'gt_mask': to_np(target[:2,0,:,:]),
+                        'gt_mask1': to_np(target[:2,1,:,:]),
+                        'gt_mask2': to_np(target[:2,2,:,:]),
+                        'gt_mask3': to_np(target[:2,3,:,:]), 
+                        'gt_mask0': to_np(target[:2,4,:,:]),
+                        'gt_border': to_np(target[:2,5,:,:]),   
+                        'gt_vectors': to_np(target[:2,6,:,:]+target[:2,7,:,:]), # simple hack - just sum the vectors
+                        'pred_mask': to_np(m(output.data[:2,0,:,:])),
+                        'pred_mask1': to_np(m(output.data[:2,1,:,:])),
+                        'pred_mask2': to_np(m(output.data[:2,2,:,:])),
+                        'pred_mask3': to_np(m(output.data[:2,3,:,:])),
+                        'pred_mask0': to_np(m(output.data[:2,4,:,:])),
+                        'pred_border': to_np(m(output.data[:2,5,:,:])),
+                        'pred_vectors': to_np(output.data[:2,6,:,:]+output.data[:2,7,:,:]),                         
+                        'pred_energy': energy_levels[:2,:,:], 
+                        'pred_wt': y_preds_wt[:2,:,:],
+                        'pred_wt_seed': y_preds_wt_seed[:2,:,:,:],
+                    }
+                    for tag, images in info.items():
+                        logger.image_summary(tag, images, valid_minib_counter)                          
                         
 
+                        
         # calcuale f1 scores only on inner cell masks
         # weird pytorch numerical issue when converting to float
         target_f1 = (target_var.data[:,0:1,:,:]>args.ths)*1        

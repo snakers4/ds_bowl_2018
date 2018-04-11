@@ -8,7 +8,7 @@ from models.LinkNet import LinkInceptionResNet,LinkCeption
 from models.LinkNet import ResNet34Unet
 from models.VggUNet import UNet11
 from models.GCN import FCN
-from models.TernausNet import AlbuNet,UNet16
+from models.TernausNet import AlbuNet,UNet16,UNet16Mod
 
 model_presets = {
     'albunet_3' : [AlbuNet,{'num_classes':3,'is_deconv':False,'pretrained':True,'num_filters':32}],
@@ -37,7 +37,10 @@ model_presets = {
     'unet16_160_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':160}],
     'unet16_128_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':128}],
     
-    'unet16_64_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':64}],     
+    'unet16mod_64_7_dc' : [UNet16Mod,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':64}],
+    
+    'unet16_64_7_dc' : [UNet16,{'num_classes':7,'is_deconv':True,'pretrained':True,'num_filters':64}],
+    'unet16_64_8_dc' : [UNet16,{'num_classes':8,'is_deconv':True,'pretrained':True,'num_filters':64}],      
     
     'albunet32_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':32}],
     'albunet64_6_dc' : [AlbuNet,{'num_classes':6,'is_deconv':True,'pretrained':True,'num_filters':64}],       

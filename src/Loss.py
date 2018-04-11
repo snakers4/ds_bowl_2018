@@ -63,24 +63,50 @@ class TSDiceLoss(nn.Module):
 class AVDiceLoss(nn.Module):
     def __init__(self,
                  bce_weight=1,
-                 dice_weight=1):
+                 dice_weight=1,
+                 is_vectors=False):
         super().__init__()
 
         self.nll_loss = nn.BCEWithLogitsLoss()
+        # also try acos distance?
+        self.v_loss = torch.nn.MSELoss()
+        
         self.dice_weight = dice_weight
-        self.bce_weight = bce_weight        
+        self.bce_weight = bce_weight
+        self.is_vectors = is_vectors
 
     def forward(self, outputs, targets):
-        loss = self.nll_loss(outputs, targets) * self.bce_weight
-        
-        eps = 1e-10
-        dice_target = (targets == 1).float()
-        dice_output = F.sigmoid(outputs)
-        intersection = (dice_output * dice_target).sum()
-        union = dice_output.sum() + dice_target.sum() + eps
-        loss += (1 - torch.log(2 * intersection / union)) * self.dice_weight
-        # loss += torch.clamp(1 - torch.log(2 * intersection / union),0,100)  * self.dice_weight
-        return loss
+        if self.is_vectors == False:
+            loss = self.nll_loss(outputs, targets) * self.bce_weight
+
+            eps = 1e-10
+            dice_target = (targets == 1).float()
+            dice_output = F.sigmoid(outputs)
+            intersection = (dice_output * dice_target).sum()
+            union = dice_output.sum() + dice_target.sum() + eps
+            loss += (1 - torch.log(2 * intersection / union)) * self.dice_weight
+            # loss += torch.clamp(1 - torch.log(2 * intersection / union),0,100)  * self.dice_weight
+            return loss
+        else:
+            # only last 2 components
+            outputs_vectors = outputs[:,-2:,:,:]
+            targets_vectors = targets[:,-2:,:,:]
+            # all the other components
+            outputs = outputs[:,:-2,:,:]
+            targets = targets[:,:-2,:,:]            
+            
+            vector_loss = self.v_loss(outputs_vectors,targets_vectors)
+            loss = self.nll_loss(outputs, targets) * self.bce_weight
+            
+            eps = 1e-10
+            dice_target = (targets == 1).float()
+            dice_output = F.sigmoid(outputs)
+            intersection = (dice_output * dice_target).sum()
+            union = dice_output.sum() + dice_target.sum() + eps
+            loss += (1 - torch.log(2 * intersection / union)) * self.dice_weight
+            loss += vector_loss
+
+            return loss            
 
 def dice_loss(preds, trues, weight=None, is_average=True):
     num = preds.size(0)
