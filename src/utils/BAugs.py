@@ -81,7 +81,7 @@ class BAugsValPad(object):
         return DualCompose([
             # ImageOnly(CLAHE()),
             ImageOnly(AlwaysGray()),            
-            # ImageOnly(Normalize(mean=self.mean, std=self.std)),
+            ImageOnly(Normalize(mean=self.mean, std=self.std)),
         ])(img, mask)      
     
 class BAugsNoResizeCrop(object):

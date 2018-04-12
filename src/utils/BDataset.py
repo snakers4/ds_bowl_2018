@@ -60,7 +60,7 @@ resolution_list = [
     ['260x347',[260,347],[288,352]], 
     ['512x640',[512,640],[512,640]],   
     ['603x1272',[603,1272],[608,1280]],    
-    ['1040x1388',[1040,1388],[1056,1376]],  
+    # ['1040x1388',[1040,1388],[1056,1376]],  
     ['1024x1024',[1024,1024],[1024,1024]], 
 ]
 
@@ -869,8 +869,8 @@ class BDatasetResizeSeedErode(data.Dataset):
             img = imread(img_glob[0])[:,:,0:3]
 
         elif self.mode == 'test':
-            img_glob = glob.glob('../data/stage1_test/{}/images/*.png'.format(self.df.loc[self.train_idx[idx],'sample']))
-            img = imread(img_glob[0])[:,:,0:3]
+            img_path = self.df.loc[self.train_idx[idx],'path']
+            img = imread(img_path)[:,:,0:3]
             
             img_id = self.df.loc[self.train_idx[idx],'img'].split('.')[0]
             

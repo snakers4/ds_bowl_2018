@@ -179,7 +179,9 @@ def main():
     # predict loops
     if (args.predict or args.predict_train):
         # read the test df    
-        test_df = pd.read_pickle('../data/test_df_stage1_meta')
+        # test_df = pd.read_pickle('../data/test_df_stage1_meta')
+        test_df = pd.read_pickle('../data/stage2_test_df')
+        
         test_df = test_df.reset_index() 
 
         test_resl_list = list(test_df.w_h.unique())
@@ -232,7 +234,7 @@ def main():
         print('Saving submission df ...')
         submit_df = submit_df.set_index('ImageId')
         submit_df = submit_df.sort_index()
-        submit_df.to_csv('../submissions/{}.csv'.format(args.lognumber))
+        submit_df.to_csv('../submissions/stage2_{}.csv'.format(args.lognumber))
     
     # evaluate loop
     elif args.evaluate:
