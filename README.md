@@ -15,11 +15,19 @@ Most prominently it features a dockerized PyTorch implementation of approach sim
 
 
 Since the target metric was highly unstable (average mAP on 0.5 - 0.95 thresholds) and the private LB contained data mostly not related to the train dataset, it's a bit difficult to evaluate code performance, but it's safe to say that:
-- Without ensembling, on one fold and without manual data annotation - this approach scored in the top 500(out of 4000+ contestants) on the public LB (mAP 0.42);
+- Without ensembling, on one fold and without manual data annotation - this approach scored in the top 500 (out of 4000+ contestants) on the public LB (mAP 0.42);
 - The core model achieves an F1 score of 0.91-0.92 and a local score of (mAP 0.62+);
 - I suspect that significant local / LB discrepancy is due to lack of external data / manual annotation;
 - A similar approach was mostly used by the majority of the competition leaders;
 - I did not invest time in ensembling / folding / annotation etc because I entered late and it was obvious that second stage would be a gamble given the quality of the dataset and organization;
+
+Key take-aways:
+- DWT / energy greatly helps - it gave ~0.07-0.09 mAP locally and ~0.05 - 0.07 on the LB;
+- All other promising post-processing techniques (e.g. detecting centers of the nuclei with [blob_log](http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_blob.html) and using them as additional energy level) did not work;
+- The base model is very powerful, but probably prone to overfitting due to dataset being of very low quality;
+- Dataset curation / balancing / proper annotation - matters more than a particular architecture in this case;
+
+![One of best local models](best_local.jpg)
 
 
 # 1 Hardware requirements
@@ -29,12 +37,12 @@ Since the target metric was highly unstable (average mAP on 0.5 - 0.95 threshold
 - 6+ core modern CPU (Xeon, i7) for fast image pre-processing (in this case distance transform takes some time for each nuclei);
 - The models were trained on 2 * GeForce 1080 Ti;
 - Training time on my setup ~ **6-8 hours** per one fold;
-- Disk space - 10GB should be more than enough, ~20GB for built docker image;
+- Disk space - 10GB should be more than enough, ~20GB for building a docker image;
 
 **Inference**
 
 - 6+ core modern CPU (Xeon, i7) for fast image pre-processing;
-- On 2 * GeForce 1080 Ti inference takes **2-3 minutes** for the public test dataset (65 images);
+- On 2 * GeForce 1080 Ti inference takes **1-2 minutes** for the public test dataset (65 images);
 
 # 2 Preparing and launching the Docker environment
 
@@ -44,15 +52,15 @@ Since the target metric was highly unstable (average mAP on 0.5 - 0.95 threshold
 
 
 **This repository contains a Dockerfile used when training models**
-- `/dockerfiles/Dockerfile` - this is my main Dockerfile
+- `/dockerfiles/Dockerfile` - this is the main Dockerfile
 
 
 **Build a Docker image**
 
-`
+```
 cd dockerfiles
-docker build -t aveysov .
-`
+docker build -t bowl_image .
+```
 
 **Install the latest nvidia docker**
 
@@ -70,7 +78,7 @@ To test all works fine run:
 Unless you use this exact command (with --shm-size flag) (you can change ports and mounted volumes, of course), then the PyTorch generators **WILL NOT WORK**. 
 
 
-- nvidia-docker 2: `docker run --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -it -v /path/to/cloned/repository:/home/keras/notebook -p 8888:8888 -p 6006:6006  --shm-size 8G aveysov`
+- nvidia-docker 2: `docker run --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -it -v /path/to/cloned/repository:/home/keras/notebook -p 8888:8888 -p 6006:6006  --shm-size 16G bowl_image`
 - nvidia-docker: `nvidia-docker -it -v /path/to/cloned/repository:/home/keras/notebook -p 8888:8888 -p 6006:6006  --shm-size 8G aveysov`
 
 
@@ -84,21 +92,21 @@ Unless you use this exact command (with --shm-size flag) (you can change ports a
 
 - Ssh into the docker container via `docker exec -it YOUR_CONTAINER_ID`
 - Cd to the root folder of the repo
-- Dowload the data into `data/` (create a folder if it does not exist)
-- Note that data already contains pickled train dataframes with meta-data (for convenience only)
+- Dowload the data into `data/`
+- Note that `data\` already contains pickled train dataframes with meta-data (for convenience only)
 - If kaggle removes the data download links from the competition page, you can download the data from [here](https://drive.google.com/open?id=1uRO3elNqVVxeWpU8hsCn0tRP_YAtGkql)
 
     
-After all of your manipulations your directory should look like:
+After all of your manipulations your directory should look like this (omitting csv files):
 
 ```
 ├── README.md          <- The top-level README for developers using this project.
 ├── data
-│   ├── stage1_train                <- A folder with stage1 train data
 │   ├── stage1_test                 <- A folder with stage1 test data
 │   ├── stage2_test                 <- A folder with stage2 test data
 │   ├── test_df_stage1_meta         <- A pickled dataframe with stage1 test meta data
-│   └── train_df_stage1_meta        <- A pickled dataframe with stage1 train meta data
+│   ├── train_df_stage1_meta        <- A pickled dataframe with stage1 train meta data
+│   └── stage1_train                <- A folder with stage1 train data
 │       ├─ f8e74d4006dd68c1dbe68df7be905835e00d8ba4916f3b18884509a15fdc0b55
 │       │  ├──  images
 │       │  └──  masks
@@ -113,9 +121,12 @@ After all of your manipulations your directory should look like:
 └── src                                       <- Source code
 ```
 
+
 # 4 Training the model
 
 You see the list of the available model presets in `src/models/model_params.py`
+
+The best model according to my tests was Unet16 (Unet + Vgg16 pre-trained encoder)
 
 If all is ok, then use the following command to train the model
 
