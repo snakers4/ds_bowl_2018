@@ -15,13 +15,13 @@ Most prominently it features a dockerized PyTorch implementation of approach sim
 
 
 Since the target metric was highly unstable (average mAP on 0.5 - 0.95 thresholds) and the private LB contained data mostly not related to the train dataset, it's a bit difficult to evaluate code performance, but it's safe to say that:
-- Without ensembling, on one fold and without manual data annotation - this approach scored in the top 500 (out of 4000+ contestants) on the public LB (mAP 0.42);
-- The core model achieves an F1 score of 0.91-0.92 and a local score of (mAP 0.62+);
-- I suspect that significant local / LB discrepancy is due to lack of external data / manual annotation;
-- A similar approach was mostly used by the majority of the competition leaders;
+- The performance is for single model on one fold;
+- ~400th place in stage 1 LB and ~200th place in stage 2 LB (most likely the position will rise, since the LB is not finalized yet);
 - I did not invest time in ensembling / folding / annotation etc because I entered late and it was obvious that second stage would be a gamble given the quality of the dataset and organization;
 
 Key take-aways:
+- People have reported that VGG based models overfitted heavily on train/val and heavy Resnet models (e.g. Resnet152) were key. I did not test heavy Resnets, so it's very likely that performance can be impoved greatly;
+- Top solutions also featured learning 2 masks - gt mask + a boundary BETWEEN nuclei;
 - DWT / energy greatly helps - it gave ~0.07-0.09 mAP locally and ~0.05 - 0.07 on the LB;
 - All other promising post-processing techniques (e.g. detecting centers of the nuclei with [blob_log](http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_blob.html) and using them as additional energy level) did not work;
 - The base model is very powerful, but probably prone to overfitting due to dataset being of very low quality;
