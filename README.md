@@ -10,13 +10,13 @@
 
 This is a [DWT-inspired](https://arxiv.org/abs/1611.08303) solution to the Kaggle's 2018 [DS Bowl](https://www.kaggle.com/c/data-science-bowl-2018/) I produced within approximately 1 week before the end of the compeititon.
 
+**UPDATE 2018-04-22** - my score was 114th. I guess they are cleaning the LB in the end.
 
 Most prominently it features a dockerized PyTorch implementation of approach similar to Deep Watershed Transform.
 
-
 Since the target metric was highly unstable (average mAP on 0.5 - 0.95 thresholds) and the private LB contained data mostly not related to the train dataset, it's a bit difficult to evaluate code performance, but it's safe to say that:
 - The performance is for single model on one fold;
-- ~400th place in stage 1 LB and ~200th place in stage 2 LB (most likely the position will rise, since the LB is not finalized yet);
+- ~400th place in stage 1 LB and ~100th place in stage 2 LB (most likely the position will rise, since the LB is not finalized yet);
 - I did not invest time in ensembling / folding / annotation etc because I entered late and it was obvious that second stage would be a gamble given the quality of the dataset and organization;
 
 Key take-aways:
