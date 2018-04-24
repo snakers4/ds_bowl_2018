@@ -392,6 +392,21 @@ def main():
                 print('Encoder unfrozen')
                 model.module.require_encoder_grad(True)
                 
+                # do not forget to refresh the optimizers!
+                if args.optimizer.startswith('adam'):
+                    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                                 # Only finetunable params
+                                                 lr=args.lr)
+                elif args.optimizer.startswith('rmsprop'):
+                    optimizer = torch.optim.RMSprop(filter(lambda p: p.requires_grad, model.parameters()),
+                                                    # Only finetunable params
+                                                    lr=args.lr)
+                elif args.optimizer.startswith('sgd'):
+                    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                                # Only finetunable params
+                                                lr=args.lr)                
+                
+                
             scheduler.step()
             # loop over each resolution in the dataset
             
