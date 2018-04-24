@@ -12,6 +12,8 @@ This is a [DWT-inspired](https://arxiv.org/abs/1611.08303) solution to the Kaggl
 
 **UPDATE 2018-04-22** - my score was 114th. I guess they are cleaning the LB in the end.
 
+**UPDATE 2018-04-24** - found out why my model generalized poorly - I forgot to re-create `optimizer` after unfreezing the encoder weights.
+
 Most prominently it features a dockerized PyTorch implementation of approach similar to Deep Watershed Transform.
 
 Since the target metric was highly unstable (average mAP on 0.5 - 0.95 thresholds) and the private LB contained data mostly not related to the train dataset, it's a bit difficult to evaluate code performance, but it's safe to say that:
